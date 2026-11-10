@@ -12,27 +12,30 @@
 |---|---|---:|---:|
 | Domain | [SearchRepositoriesUseCaseTests.swift](GitDiscoverTests/Domain/SearchRepositoriesUseCaseTests.swift) | 5 | 9 |
 | Cache/decorator | [CachedRepositorySearchRepositoryTests.swift](GitDiscoverTests/Data/CachedRepositorySearchRepositoryTests.swift) | 11 | 14 |
-| API client | [GitHubAPIClientTests.swift](GitDiscoverTests/Data/GitHubAPIClientTests.swift) | 15 | 23 |
+| API client | [GitHubAPIClientTests.swift](GitDiscoverTests/Data/GitHubAPIClientTests.swift) | 20 | 43 |
+| URLSession integration | [URLSessionHTTPClientTests.swift](GitDiscoverTests/Data/URLSessionHTTPClientTests.swift) | 1 | 1 |
 | Presentation | [SearchViewModelTests.swift](GitDiscoverTests/Presentation/SearchViewModelTests.swift) | 13 | 18 |
 | UI workflows | [GitDiscoverUITests.swift](GitDiscoverUITests/GitDiscoverUITests.swift) | 5 | 5 |
-| **Total** | | **49** | **69** |
+| **Total inventory** | | **55** | **90** |
 
-The retained final Debug `.xcresult`, dated November 9, 2026, was inspected during this documentation update: **49 passing tests, 69 device executions, zero failures and zero skips**, on iPhone 17 Pro / iOS 26.4. The table matches the current source inventory. This is a saved execution result, **not a new test run**.
+The latest Debug run on November 9, 2026 executed **all 50 unit-test functions / 85 executions**, with zero failures or skips, on iPhone 17 Pro / iOS 26.4. The `.xcresult` summary was inspected. The five unchanged UI workflows were **not rerun** for network-test hardening; the inventory total must not be presented as one new 55-test passing run.
 
 Earlier delivery notes also record:
 
+- A complete Debug run, before this hardening, passed all then-existing 49 tests / 69 executions on iPhone 17 Pro / iOS 26.4, including the five UI workflows.
 - Five UI workflows passed on iPhone SE (3rd generation) / iOS 17.5 before the final Data-layer review, with search/detail screenshots inspected.
 - Release `build-for-testing` succeeded with command-only `ENABLE_TESTABILITY=YES`; this does not prove Release runtime behavior.
 - A separate, temporary live API smoke check decoded 30 results and observed one HTTP request for two equivalent queries before the final API review. It is not part of the offline automated suite.
 
-No build, new test run or live request was made for this documentation-only change. Reproduction commands are in [README.md](README.md#reproduce-the-checks). No iOS 16 runtime is installed locally, so minimum-OS execution remains open.
+The new tests first reproduced acceptance of a negative reset timestamp; the corrected client rejects it and the full unit target passes. No live API request was made. Reproduction commands are in [README.md](README.md#reproduce-the-checks); use `-only-testing:GitDiscoverTests` for the latest run's scope. No iOS 16 runtime is installed locally, so minimum-OS execution remains open.
 
 ## 2. Boundaries and fixtures actually used
 
 - [TestSupport.swift](GitDiscoverTests/TestSupport.swift) supplies repository fixtures, `RepositorySpy`, an actor-backed `TestTimeProvider` and a continuation-based `SuspensionGate`.
 - Domain tests inject `RepositorySearching` spies and assert forwarded queries, results and errors.
 - Cache tests inject a fake repository and clock, advance time directly and count remote calls. Cancellation tests suspend the remote or cache-write clock.
-- API tests generate small JSON payloads in memory and inject `HTTPSpy` / `SuspendedHTTPClient`. They do **not** use a real `URLSession` or `URLProtocol`.
+- API tests generate small JSON payloads in memory and inject `HTTPSpy`, `SuspendedHTTPClient` or `GatedHTTPClient`. Separate transport integration coverage uses a real ephemeral `URLSession` with a local `URLProtocol`.
+- The transport test observes `startLoading` before canceling, then requires `stopLoading` and a canceled-URL error before session cleanup. Unique request URLs isolate notification observations; no mutable global test handler or real network is used. A test time limit bounds a missing callback.
 - Presentation tests inject immediate/gated delays and a `ControlledRepository` that can report cancellation yet resolve later, with different repository IDs for old/new searches.
 - UI tests launch a Debug app with `--ui-testing`. `UITestRepository` replaces the repository below the use case, bypassing production HTTP/cache. `empty`, `offline` and `ratelimit` select fixture behaviors.
 - Unit tests do not sleep for TTL expiry or guess response order. UI tests wait for elements and use the production debounce.
@@ -86,8 +89,11 @@ Covered by [GitHubAPIClientTests.swift](GitDiscoverTests/Data/GitHubAPIClientTes
 | N-10 | Connectivity failure | Distinct connectivity error |
 | N-11 | New query before/at a shared cooldown deadline | No extra HTTP call before the deadline; a request is permitted at equality |
 | N-12 | Fresh cache entry while another query is rate-limited | Cached result still returned; uncached queries remain blocked |
+| N-13 | HTTP-date `Retry-After`; both deadline headers present | Absolute date parsed; valid Retry-After seconds/date wins over reset |
+| N-14 | Malformed, negative or non-finite deadline header | Invalid Retry-After falls through to valid reset or 60-second fallback; invalid reset uses fallback and blocks another query |
+| N-15 | Two HTTP requests pending before either reports a rate limit | Both completion orders retain the longest deadline; another query stays blocked at the shorter deadline |
 
-**Boundary:** N-07 proves the task's cancellation state reaches the injected transport. It does not assert that `URLSessionHTTPClient` stops an actual URL loading request. That integration test remains open.
+**Transport integration:** [URLSessionHTTPClientTests.swift](GitDiscoverTests/Data/URLSessionHTTPClientTests.swift) proves that canceling the adapter's task invokes `URLProtocol.stopLoading` and returns `URLError.cancelled`. This exercises the real URLSession loading lifecycle locally, not a live socket or GitHub server. N-07 separately verifies API-layer cancellation translation and rejection of late fake responses.
 
 ## 6. Presentation coverage — implemented
 
@@ -139,12 +145,13 @@ For each pending item, record device/model, OS, source revision, steps, result a
 | Blocked locally | Run on iOS 16 | Install/use a compatible runtime or physical device; no iOS 16 runtime is currently installed |
 | Pending | iPad, small screen, large Dynamic Type, VoiceOver and keyboard/navigation | Readable layout, usable controls and sensible focus/labels |
 
-## 9. Remaining automated coverage and completion criteria
+## 9. Hardening completion and remaining acceptance
 
-Recommended additions, not existing tests:
+The requested network hardening is implemented and passing in the latest unit run:
 
-- Local `URLProtocol` integration coverage of real `URLSessionHTTPClient` request cancellation.
-- HTTP-date `Retry-After`, malformed/negative/non-finite deadline headers and precedence when both deadline headers are present.
-- Overlapping rate-limit responses with different deadlines, asserting that a shorter response cannot reduce the shared cooldown.
+- [x] Local `URLProtocol` coverage of real `URLSessionHTTPClient` cancellation.
+- [x] HTTP-date parsing, invalid deadline values and deadline-header precedence.
+- [x] Overlapping rate-limit responses in both completion orders, preserving the longest deadline.
+- [x] Regression for negative `X-RateLimit-Reset`, reproduced before and passing after the production fix.
 
-The existing required Domain/cache and stale-response Presentation cases are implemented and have a passing retained run. Full acceptance still requires minimum-OS and scenario-level manual checks. After code changes, rerun the affected suites; do not infer fresh success from this historical record. Keep new automated tests offline and deterministic, and report skipped/blocked checks explicitly.
+Full acceptance still requires minimum-OS and scenario-level manual checks. UI workflows retain their earlier passing result, not a fresh run after this change. After further code changes, rerun affected suites; keep automated tests offline and deterministic, and report skipped/blocked checks explicitly.

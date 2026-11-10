@@ -2,7 +2,7 @@
 
 A small SwiftUI iOS application for searching and exploring public GitHub repositories. Built as a technical assessment focused on clean architecture, async cancellation, an in-memory TTL cache and unit tests.
 
-> **Status as of November 9, 2026:** the search/detail MVP is implemented with Domain, Data/cache and Presentation layers. The retained final Debug test result reports **49 passing tests (69 executions)** on iOS 26.4. This documentation update inspected that result rather than rerunning the suite. The deployment target is iOS 16.0, but execution on iOS 16 remains unverified.
+> **Status as of November 9, 2026:** the search/detail MVP is implemented with Domain, Data/cache and Presentation layers. After network-test hardening, all **50 unit-test functions (85 executions)** pass on iOS 26.4. The five UI workflows passed in an earlier run and were not rerun for this change. The deployment target is iOS 16.0, but execution on iOS 16 remains unverified.
 
 ## MVP features
 
@@ -62,14 +62,14 @@ Normal launches use the live public API. For offline UI tests only, a Debug buil
 2. Run **Product > Test** (**Cmd+U**).
 3. Review Domain, API/cache, Presentation and UI results in the test navigator.
 
-Automated tests use fakes, controlled continuations and injected clocks/delays. They do not call GitHub or wait for cache expiry in real time. UI tests use the production debounce and Debug-only fixtures. The separate live API smoke check was not part of the automated suite.
+Automated tests use fakes, controlled continuations and injected clocks/delays. An ephemeral `URLSession` with a local `URLProtocol` also verifies that cancellation stops underlying URL loading and produces `URLError.cancelled`, without sending traffic to GitHub. Tests do not wait for cache expiry in real time. UI tests use the production debounce and Debug-only fixtures. The separate live API smoke check was not part of the automated suite.
 
 ## Verification record
 
-The source, test inventory, Xcode scheme, installed toolchain and available simulators were checked during this documentation update. The saved final `.xcresult` was also inspected: it reports 49 passing tests, 69 device executions, and no failures or skips. **No build, new test run or live API request was performed for this documentation-only change.** Other historical checks below were recorded in the existing delivery notes and were not repeated.
+The latest Debug run built and executed the complete unit-test target after adding network regressions and fixing negative reset-header handling: **50 passing test functions, 85 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. UI tests, Release compilation and live API checks were not repeated for this change; their earlier evidence is listed separately below.
 
 - Toolchain checked locally: Xcode 26.4, Swift compiler 6.3 and iOS Simulator SDK 26.4.
-- Retained final post-review Debug test run on iPhone 17 Pro / iOS 26.4, November 9, 2026: **49 tests passed, 0 failed, 0 skipped**. Including parameterized cases, Xcode reports **69 executions** (44 unit-test functions / 64 unit executions, plus 5 UI tests).
+- Earlier complete Debug test run on iPhone 17 Pro / iOS 26.4, before network-test hardening: **49 tests passed, 0 failed, 0 skipped**, with **69 executions** (44 unit-test functions / 64 unit executions, plus 5 UI tests). This is historical evidence, not the current test inventory.
 - Before the final Data-layer review, the five UI tests also passed on iPhone SE (3rd generation) / iOS 17.5. Search and detail screenshots were inspected on both devices.
 - `build-for-testing` succeeded in Release for the complete app and test targets. No Swift concurrency errors or Swift compiler warnings were reported in the final builds.
 - Effective build settings confirm Swift 6.0, complete concurrency checking and iOS 16.0 in all three targets in both configurations, without a module-wide `MainActor` default.
@@ -84,11 +84,15 @@ The source, test inventory, Xcode scheme, installed toolchain and available simu
 
 - Corrected a rate-limit bypass: changing the query could previously send another HTTP request during a known cooldown. Tests first reproduced this for both HTTP 403 and 429, then verified that the shared deadline blocks new requests, allows a request at exactly the deadline, and does not block fresh cache hits. Responses without a deadline use the same conservative fallback across queries.
 - Corrected literal-plus encoding: plain `queryItems` preserved `+` on the wire, where form-query parsing can treat it as a space. Parameterized tests now verify both the decoded expression and the absence of unescaped plus signs in the outgoing query, including `C++`, percent signs, separators and Unicode.
-- Reviewed cancellation propagation through the use case and URLSession adapter, generation-safe state publication, quoted cache keys, the exact 180-second expiry boundary and cancellation checks around actor cache writes. No additional concrete defects were identified in those reviewed paths. This is not a guarantee of defect-free behavior or minimum-OS runtime compatibility.
+- Added real `URLSession` cancellation integration coverage, HTTP-date `Retry-After`, deadline-header precedence, malformed/negative/non-finite values and controlled overlapping rate-limit responses in both completion orders.
+- The new regressions exposed a negative `X-RateLimit-Reset` bypass: `-1` was accepted as a past date, allowing another request immediately. Negative reset values now use the conservative fallback, with a failing-before/passing-after test.
+- Cancellation, generation-safe publication, quoted cache keys, the exact 180-second expiry boundary and cancellation during actor writes are covered by focused tests. This is not a guarantee of defect-free behavior or minimum-OS runtime compatibility.
 
 ### Reproduce the checks
 
 Run these commands from the repository root. Discover a destination with `xcrun simctl list devices available`, then replace `YOUR_SIMULATOR_UDID` with an installed iOS 16+ simulator's UUID. Build outputs stay outside the repository. The Debug command runs both unit and UI tests; the second command is an optional UI-only run on the same or another simulator.
+
+To reproduce the latest **unit-only** verification scope, add `-only-testing:GitDiscoverTests` to the first command.
 
 ```sh
 xcodebuild test \
@@ -147,7 +151,7 @@ GitDiscover/
     Presentation/                 Search state/ViewModel, row and detail views
 GitDiscoverTests/
     Domain/                       5 tests, including invalid-query parameters
-    Data/                         26 API and cache tests
+    Data/                         32 API, transport and cache tests
     Presentation/                 13 ViewModel tests
 GitDiscoverUITests/              5 offline UI workflow tests
 ```
@@ -165,13 +169,11 @@ No missing core search/detail/cache feature was identified in this documentation
 | Minimum OS | Run on an actual iOS 16 simulator/device; no iOS 16 runtime is installed locally. |
 | Manual acceptance | Record scenario-level outcomes, device and OS for live search, cancellation, errors and opening the GitHub link. A general user confirmation does not close this checklist. |
 | Layout and accessibility | Verify iPad, large Dynamic Type, VoiceOver and keyboard/navigation behavior; these checks have no recorded scenario-level results. |
-| Transport coverage | Cancellation tests exercise an injected `HTTPClient`, not a real `URLSession` request. Add a local `URLProtocol` integration test to verify underlying request cancellation without calling GitHub. |
-| Additional edge coverage | HTTP-date `Retry-After`, malformed deadline headers and overlapping rate-limit responses lack dedicated tests. |
 | Repository hygiene | Add a `.gitignore` and remove staged `.DS_Store` / Xcode `xcuserdata` from version control without deleting local user settings. |
 | Delivery automation | No CI workflow or committed shared scheme exists. Local autogenerated schemes work; share a scheme and add CI if repeatable automated delivery is required. |
 | Publication | Choose a license before open-source release. The app-icon catalog has no image files; supply artwork before distribution. |
 
-These are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md). This review only changes documentation; it does not perform the cleanup or add the missing tests.
+These are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md). The network-test hardening closes the previously listed transport and deadline-header coverage gaps; it does not perform repository cleanup or complete manual acceptance.
 
 The app intentionally has no authentication, pagination, favorites or offline persistence. The response DTO reads `items` only: `total_count` and `incomplete_results` are not displayed. Live availability depends on connectivity and anonymous GitHub limits. The in-memory cache has no size bound, persistence or in-flight request coalescing; these are documented MVP trade-offs, not promised features.
 

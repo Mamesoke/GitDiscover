@@ -116,11 +116,11 @@ Rate limit reference: https://docs.github.com/en/rest/using-the-rest-api/rate-li
 Checked items below mean implemented with the evidence described, not that every device or manual workflow has been validated.
 
 - [x] Live API search is implemented; an earlier smoke check and successful manual use were recorded in the delivery notes, but not repeated in this documentation update.
-- [x] New input immediately cancels its task; cancellation reaches an injected HTTP transport in tests. Real `URLSession` cancellation has no dedicated integration test yet.
+- [x] New input immediately cancels its task; injected transport tests verify propagation, and a real `URLSession` / local `URLProtocol` integration test verifies underlying URL-loading cancellation.
 - [x] Superseded success/error responses cannot update Presentation in controlled-continuation tests.
 - [x] Detail shows name, description, owner, language, stars, forks and a GitHub link; fixture UI tests exercise navigation and fallback values.
 - [x] Cache tests verify fresh hits, exact 180-second expiry, normalization and canceled writes.
-- [x] The retained final Debug result reports all 44 unit-test functions and 5 UI tests passing on iOS 26.4.
+- [x] The latest Debug unit run passes all 50 unit-test functions / 85 executions on iOS 26.4. The five UI workflows passed before network-test hardening and were not rerun for this change.
 - [x] Deployment is configured for iOS 16.0; prior simulator runs were recorded on iOS 26.4 and, for UI workflows, iOS 17.5.
 - [x] Documentation now describes the actual source layout, behavior, test evidence and known gaps.
 - [x] The production graph uses no credentials, authentication or third-party packages.

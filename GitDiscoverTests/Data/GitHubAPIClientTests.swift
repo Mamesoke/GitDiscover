@@ -55,6 +55,109 @@ struct GitHubAPIClientTests {
         }
     }
 
+    @Test func retryAfterHTTPDateUsesAbsoluteDeadline() async throws {
+        let http = HTTPSpy(result: .success((Data(), try response(status: 429, headers: [
+            "Retry-After": "Thu, 01 Jan 1970 00:18:40 GMT"
+        ]))))
+        let client = GitHubAPIClient(httpClient: http, timeProvider: TestTimeProvider())
+
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: Date(timeIntervalSince1970: 1_120))) {
+            try await client.search(query: "swift")
+        }
+    }
+
+    @Test(arguments: ["120", "Thu, 01 Jan 1970 00:18:40 GMT"])
+    func retryAfterTakesPrecedenceOverReset(value: String) async throws {
+        let http = HTTPSpy(result: .success((Data(), try response(status: 429, headers: [
+            "Retry-After": value, "X-RateLimit-Reset": "2000"
+        ]))))
+        let client = GitHubAPIClient(httpClient: http, timeProvider: TestTimeProvider())
+
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: Date(timeIntervalSince1970: 1_120))) {
+            try await client.search(query: "swift")
+        }
+    }
+
+    @Test(arguments: ["not-a-date", "-1", "NaN", "inf", "-inf"], [false, true])
+    func invalidRetryAfterUsesResetOrFallback(value: String, hasReset: Bool) async throws {
+        var headers = ["Retry-After": value]
+        if hasReset { headers["X-RateLimit-Reset"] = "1120" }
+        let http = HTTPSpy(result: .success((Data(), try response(status: 429, headers: headers))))
+        let client = GitHubAPIClient(httpClient: http, timeProvider: TestTimeProvider())
+        let deadline = Date(timeIntervalSince1970: hasReset ? 1_120 : 1_060)
+
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: deadline)) {
+            try await client.search(query: "swift")
+        }
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: deadline)) {
+            try await client.search(query: "kotlin")
+        }
+        #expect(await http.requests.count == 1)
+    }
+
+    @Test(arguments: ["not-a-date", "-1", "NaN", "inf", "-inf"])
+    func invalidResetUsesConservativeFallback(value: String) async throws {
+        let http = HTTPSpy(result: .success((Data(), try response(status: 429, headers: [
+            "X-RateLimit-Reset": value
+        ]))))
+        let client = GitHubAPIClient(httpClient: http, timeProvider: TestTimeProvider())
+        let deadline = Date(timeIntervalSince1970: 1_060)
+
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: deadline)) {
+            try await client.search(query: "swift")
+        }
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: deadline)) {
+            try await client.search(query: "kotlin")
+        }
+        #expect(await http.requests.count == 1)
+    }
+
+    @Test(arguments: [false, true])
+    func overlappingRateLimitsKeepLongestDeadline(longFinishesFirst: Bool) async throws {
+        let longGate = SuspensionGate()
+        let shortGate = SuspensionGate()
+        let clock = TestTimeProvider()
+        let http = GatedHTTPClient(replies: [
+            (longGate, try response(status: 429, headers: ["Retry-After": "120"])),
+            (shortGate, try response(status: 403, headers: [
+                "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1060"
+            ]))
+        ])
+        let client = GitHubAPIClient(httpClient: http, timeProvider: clock)
+        let longDeadline = Date(timeIntervalSince1970: 1_120)
+        let shortDeadline = Date(timeIntervalSince1970: 1_060)
+        let longRequest = Task { try await client.search(query: "swift") }
+        await longGate.waitUntilEntered()
+        let shortRequest = Task { try await client.search(query: "kotlin") }
+        await shortGate.waitUntilEntered()
+
+        if longFinishesFirst {
+            await longGate.release()
+            await #expect(throws: RepositorySearchError.rateLimited(retryAt: longDeadline)) {
+                try await longRequest.value
+            }
+            await shortGate.release()
+            await #expect(throws: RepositorySearchError.rateLimited(retryAt: longDeadline)) {
+                try await shortRequest.value
+            }
+        } else {
+            await shortGate.release()
+            await #expect(throws: RepositorySearchError.rateLimited(retryAt: shortDeadline)) {
+                try await shortRequest.value
+            }
+            await longGate.release()
+            await #expect(throws: RepositorySearchError.rateLimited(retryAt: longDeadline)) {
+                try await longRequest.value
+            }
+        }
+
+        await clock.advance(by: 60)
+        await #expect(throws: RepositorySearchError.rateLimited(retryAt: longDeadline)) {
+            try await client.search(query: "rust")
+        }
+        #expect(await http.requests.count == 2)
+    }
+
     @Test(arguments: [403, 429])
     func rateLimitDeadlineAppliesToSubsequentQueries(status: Int) async throws {
         let clock = TestTimeProvider()
@@ -230,5 +333,22 @@ private actor SuspendedHTTPClient: HTTPClient {
         await gate.wait()
         observedCancellation = Task.isCancelled
         return (data, response)
+    }
+}
+
+private actor GatedHTTPClient: HTTPClient {
+    let replies: [(gate: SuspensionGate, response: HTTPURLResponse)]
+    private(set) var requests: [URLRequest] = []
+
+    init(replies: [(gate: SuspensionGate, response: HTTPURLResponse)]) {
+        self.replies = replies
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        try #require(requests.count < replies.count)
+        let reply = replies[requests.count]
+        requests.append(request)
+        await reply.gate.wait()
+        return (Data(), reply.response)
     }
 }

@@ -69,6 +69,7 @@ GitDiscoverTests/
   Domain/SearchRepositoriesUseCaseTests.swift
   Data/CachedRepositorySearchRepositoryTests.swift
   Data/GitHubAPIClientTests.swift
+  Data/URLSessionHTTPClientTests.swift
   Presentation/SearchViewModelTests.swift
   TestSupport.swift
 GitDiscoverUITests/
@@ -234,5 +235,5 @@ In Debug only, `--ui-testing` replaces the repository with `UITestRepository`. I
 - All three targets use Swift 6 language mode; project settings enable complete strict-concurrency checking in Debug and Release.
 - There is no module-wide `MainActor` default. Presentation and composition explicitly opt in; cache and client isolate mutable state in actors. Approachable concurrency remains enabled.
 - The configured iOS 16.0 deployment target is not evidence of execution on iOS 16. That runtime check is still open.
-- Cancellation tests use an injected transport. A real `URLSession` / local `URLProtocol` cancellation integration test remains a coverage gap.
+- Cancellation tests use injected transports and a real ephemeral `URLSession` / local `URLProtocol` integration test that observes request start/stop. The test protocol has no mutable state and uses request-specific notification observations; no global mutable handler or external network is involved.
 - Source boundaries, cache memory policy and wall-clock TTL are deliberate simplicity trade-offs; no additional framework or module split is required for this MVP.

@@ -106,7 +106,7 @@ actor GitHubAPIClient {
             if let date = formatter.date(from: value) { return date }
         }
         guard let value = response.value(forHTTPHeaderField: "X-RateLimit-Reset"),
-              let seconds = Double(value), seconds.isFinite else { return nil }
+              let seconds = Double(value), seconds.isFinite, seconds >= 0 else { return nil }
         return Date(timeIntervalSince1970: seconds)
     }
 }

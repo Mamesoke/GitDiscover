@@ -40,7 +40,8 @@ See [SPEC.md](SPEC.md) for behavior, [ARCHITECTURE.md](ARCHITECTURE.md) for the 
 
 | Evidence | Status and scope |
 |---|---|
-| Final Debug suite | Retained result inspected during this update: 49 passing tests / 69 executions, no failures or skips, iPhone 17 Pro / iOS 26.4. |
+| Latest Debug unit suite | After network-test hardening: all 50 unit-test functions / 85 executions passed, no failures or skips, iPhone 17 Pro / iOS 26.4. |
+| Earlier complete Debug suite | Retained pre-hardening result: 49 passing tests / 69 executions, including five UI workflows, no failures or skips, iPhone 17 Pro / iOS 26.4. UI workflows were not rerun for this change. |
 | Earlier UI run | Previously recorded: all five workflows passed on iPhone SE (3rd generation) / iOS 17.5 before the final Data-layer review; screenshots were inspected. Not repeated here. |
 | Release test compilation | Previously recorded successful `build-for-testing` with command-only `ENABLE_TESTABILITY=YES`. This is compilation evidence, not a Release runtime test. |
 | Live API smoke check | Previously recorded before the final API review: 30 decoded results and one HTTP request across two equivalent queries. Not a persistent automated test. |
@@ -58,15 +59,16 @@ These are verification gaps, not evidence that the corresponding feature is abse
 - [ ] **Supported layouts:** check iPad, small screens and large Dynamic Type with the current source.
 - [ ] **Accessibility:** record VoiceOver labels, focus/navigation, keyboard dismissal and control usability. Existing identifiers and fixture tests are not a full accessibility audit.
 
-## 4. Recommended coverage hardening
+## 4. Completed network coverage hardening
 
-These strengthen confidence but were not part of the missing core feature set.
+These additions strengthen confidence without expanding the MVP feature set. They are included in the latest passing unit run.
 
-- [ ] Verify `URLSessionHTTPClient` cancellation with a local `URLProtocol` integration test, asserting that an in-flight underlying request is stopped. Current tests only exercise injected HTTP fakes.
-- [ ] Add cases for HTTP-date `Retry-After`, malformed/negative/non-finite retry values and deadline-header precedence.
-- [ ] Add controlled overlapping rate-limit responses to verify that the longest shared deadline wins.
+- [x] Verify real `URLSessionHTTPClient` cancellation with a local `URLProtocol`, observing request start/stop and `URLError.cancelled` without network access.
+- [x] Cover HTTP-date `Retry-After`, malformed/negative/non-finite values and deadline-header precedence.
+- [x] Control overlapping rate-limit responses in both completion orders and verify that the longest deadline wins.
+- [x] Fix the exposed negative-reset bypass: reject negative `X-RateLimit-Reset` timestamps and fall back to 60 seconds. Regression reproduced before the fix and passing afterward.
 
-Keep tests offline and deterministic; use the existing clocks, gates and spies instead of real TTL waits or public API calls.
+The additions reuse clocks, gates and spies, with no real TTL waits, new dependencies or public API calls. Five API test functions plus one transport test were added. The total source inventory is now 55 test functions / 90 executions, but only the 50-function unit target was executed for this change.
 
 ## 5. Repository and publication preparation
 
