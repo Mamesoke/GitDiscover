@@ -2,6 +2,10 @@
 
 A small SwiftUI iOS application for searching and exploring public GitHub repositories. Built as a technical assessment focused on clean architecture, async cancellation, an in-memory TTL cache and unit tests.
 
+
+https://github.com/user-attachments/assets/4d6ca4bc-5f8e-4c0d-95a7-75a02127c2a4
+
+
 > **Status as of November 10, 2026:** the search/detail MVP and in-scope acceptance checks are complete. The latest unit run passes all **50 test functions (85 executions)** on iPad / iOS 18.0; the five offline UI workflows also have passing results on iOS 26.4. Manual validation on iPhone and iPad across OS versions 16 through 26, live search, the external GitHub link and in-scope accessibility were confirmed.
 
 ## MVP features
