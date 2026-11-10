@@ -119,13 +119,15 @@ Additional tests assert the configured 400 ms duration, no fetch before a gated 
 
 | Test | Assertions |
 |---|---|
-| `testSearchDetailAndClear` | Fixture results, navigation, owner/language/stars/forks, link existence, back navigation and clear to idle; captures screenshots |
+| `testSearchDetailAndClear` | Search placeholder/value, clear-button enabled state, fixture results, navigation, owner/language/stars/forks, link existence, back navigation and clear to idle; captures screenshots |
 | `testMissingFieldsHaveDetailFallbacks` | Description and language fallback labels |
-| `testEmptySearchState` | Empty state without result rows |
+| `testEmptySearchState` | Empty state with title/query text and without result rows |
 | `testRecoverableFailureCanBeRetried` | First fixture failure enables Retry; retry returns results |
 | `testRateLimitDisablesImmediateRetry` | Error state with disabled Retry |
 
 The tests do not tap the external GitHub link, wait through a real cooldown, inspect actual network traffic or exercise production cache behavior. Unit tests cover cache/cooldown logic separately.
+
+After extracting `SearchFieldView` and `StatusView` on November 10, all five UI workflows passed again on iPhone 17 Pro / iOS 26.4, with no failures or skips; the `.xcresult` summary was inspected. The added assertions verify binding updates, clear-button state and optional status-message rendering. This refactor's validation was UI-only; the complete-suite and Release results in section 1 predate it.
 
 ## 8. Manual acceptance matrix — pending scenario-level evidence
 

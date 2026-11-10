@@ -66,7 +66,9 @@ Automated tests use fakes, controlled continuations and injected clocks/delays. 
 
 ## Verification record
 
-The latest Debug run on November 10, 2026 built and executed both test targets using the shared scheme and the new app icon: **55 passing test functions, 90 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. Release compilation was also repeated successfully. These are local results; the prepared GitHub Actions workflow has not run on GitHub, and live API/manual checks were not repeated.
+The latest complete Debug run on November 10, 2026 built and executed both test targets using the shared scheme and the new app icon: **55 passing test functions, 90 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. Release compilation was also repeated successfully. These are local results; the prepared GitHub Actions workflow has not run on GitHub, and live API/manual checks were not repeated.
+
+After extracting the shared search-field and status components later that day, all **five UI workflows** passed again on the same simulator, including added assertions for the search binding, clear-button state and empty-state text. Unit tests and Release compilation were not repeated for this presentation-only refactor.
 
 - Toolchain checked locally: Xcode 26.4, Swift compiler 6.3 and iOS Simulator SDK 26.4.
 - Previous unit-only run after network-test hardening on November 9: **50 passing functions / 85 executions**, with no failures or skips, on iPhone 17 Pro / iOS 26.4.
@@ -151,6 +153,7 @@ GitDiscover/
     Domain/                       Entity, search contract, errors and use case
     Data/                         HTTP client, DTOs, repositories and actor cache
     Presentation/                 Search state/ViewModel, row and detail views
+        Components/               Reusable search field and status views
 GitDiscoverTests/
     Domain/                       5 tests, including invalid-query parameters
     Data/                         32 API, transport and cache tests

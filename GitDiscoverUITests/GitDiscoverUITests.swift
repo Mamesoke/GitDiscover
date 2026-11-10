@@ -25,9 +25,15 @@ final class GitDiscoverUITests: XCTestCase {
     @MainActor
     func testSearchDetailAndClear() {
         let app = launchApp()
+        let field = app.textFields["search-field"]
+        let clear = app.buttons["clear-search"]
+        XCTAssertEqual(field.value as? String, "Search GitHub repositories")
+        XCTAssertFalse(clear.isEnabled)
         search("swift", in: app)
         let row = app.buttons["repository-1"]
         XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, "swift")
+        XCTAssertTrue(clear.isEnabled)
         capture(app, name: "Search results")
         row.tap()
         XCTAssertTrue(app.staticTexts["owner-value"].waitForExistence(timeout: 5))
@@ -38,8 +44,10 @@ final class GitDiscoverUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["github-link"].exists)
         capture(app, name: "Repository detail")
         app.navigationBars.buttons["GitDiscover"].tap()
-        app.buttons["clear-search"].tap()
+        clear.tap()
         XCTAssertTrue(app.descendants(matching: .any)["idle-title"].waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String, "Search GitHub repositories")
+        XCTAssertFalse(clear.isEnabled)
         XCTAssertFalse(row.exists)
     }
 
@@ -60,6 +68,8 @@ final class GitDiscoverUITests: XCTestCase {
         let app = launchApp()
         search("empty", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["empty-state"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["No repositories found"].exists)
+        XCTAssertTrue(app.staticTexts["empty"].exists)
         XCTAssertFalse(app.buttons["repository-1"].exists)
     }
 

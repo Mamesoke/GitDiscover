@@ -1,6 +1,6 @@
 # GitDiscover — Architecture & Engineering Decisions
 
-**Status:** implemented architecture, checked against source on November 9, 2026. Runtime evidence and remaining validation are documented in [TEST_PLAN.md](TEST_PLAN.md).
+**Status:** implemented architecture, checked against source on November 10, 2026. Runtime evidence and remaining validation are documented in [TEST_PLAN.md](TEST_PLAN.md).
 
 ## 1. Architectural principle
 
@@ -59,6 +59,9 @@ GitDiscover/
       SearchResultCache.swift
       TimeProvider.swift
   Presentation/
+    Components/
+      SearchFieldView.swift          # search input and clear button
+      StatusView.swift               # symbol, title and optional message
     Search/
       SearchDelay.swift
       SearchViewModel.swift
@@ -77,6 +80,8 @@ GitDiscoverUITests/
 ```
 
 The app entry point and search screen remain at the app folder root. DTOs share one file; there is no separate `SearchView` or `GitHubRepositoryDTO` file.
+
+Shared SwiftUI components live in `Presentation/Components`. `SearchFieldView` receives a placeholder and a `Binding<String>`; `StatusView` receives display values only. Neither depends on the search ViewModel. `ContentView` retains navigation, state selection, retry handling and the binding that forwards text changes (including clear) to the ViewModel's cancellation/debounce logic.
 
 ## 3. Domain contracts
 
