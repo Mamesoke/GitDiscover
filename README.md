@@ -2,7 +2,7 @@
 
 A small SwiftUI iOS application for searching and exploring public GitHub repositories. Built as a technical assessment focused on clean architecture, async cancellation, an in-memory TTL cache and unit tests.
 
-> **Status as of November 10, 2026:** the search/detail MVP is implemented with Domain, Data/cache and Presentation layers. All **55 test functions (90 executions)** pass on iOS 26.4, including the five UI workflows. MIT licensing, repository cleanup, a shared scheme, CI configuration and original app-icon artwork are prepared locally, without committing or pushing. The deployment target is iOS 16.0, but execution on iOS 16 remains unverified.
+> **Status as of November 10, 2026:** the search/detail MVP and in-scope acceptance checks are complete. The latest unit run passes all **50 test functions (85 executions)** on iPad / iOS 18.0; the five offline UI workflows also have passing results on iOS 26.4. Manual validation on iPhone and iPad across OS versions 16 through 26, live search, the external GitHub link and in-scope accessibility were confirmed.
 
 ## MVP features
 
@@ -23,7 +23,7 @@ URLs are built with `URLComponents` and structured query items. Query values use
 
 ## Requirements
 
-- macOS with a compatible Xcode toolchain. Xcode 26.4 with Swift compiler 6.3 is verified; older toolchains have not been validated for this project configuration.
+- macOS with a compatible Xcode toolchain. The verified local toolchain is Xcode 26.4 with Swift compiler 6.3.
 - iOS 16+ simulator/device.
 - Internet connection to run live searches (not required for unit tests).
 - No API keys, backend or third-party packages.
@@ -66,23 +66,20 @@ Automated tests use fakes, controlled continuations and injected clocks/delays. 
 
 ## Verification record
 
-The latest complete Debug run on November 10, 2026 built and executed both test targets using the shared scheme and the new app icon: **55 passing test functions, 90 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. Release compilation was also repeated successfully. These are local results; the prepared GitHub Actions workflow has not run on GitHub, and live API/manual checks were not repeated.
+The latest unit-only Debug run on November 10, 2026, after the shared-component refactor, passed all **50 test functions / 85 executions**, with no failures or skips, on iPad (10th generation) / iOS 18.0. The `.xcresult` summary was inspected.
 
-After extracting the shared search-field and status components later that day, all **five UI workflows** passed again on the same simulator, including added assertions for the search binding, clear-button state and empty-state text. Unit tests and Release compilation were not repeated for this presentation-only refactor.
+The earlier complete Debug run that day built and executed both test targets using the shared scheme and the new app icon: **55 passing test functions / 90 executions**, with no failures or skips, on iPhone 17 Pro / iOS 26.4. After extracting the shared search-field and status components, all **five UI workflows** passed again on that simulator, including added assertions for the search binding, clear-button state and empty-state text.
 
 - Toolchain checked locally: Xcode 26.4, Swift compiler 6.3 and iOS Simulator SDK 26.4.
 - Previous unit-only run after network-test hardening on November 9: **50 passing functions / 85 executions**, with no failures or skips, on iPhone 17 Pro / iOS 26.4.
 - Earlier complete Debug test run on iPhone 17 Pro / iOS 26.4, before network-test hardening: **49 tests passed, 0 failed, 0 skipped**, with **69 executions** (44 unit-test functions / 64 unit executions, plus 5 UI tests). This is historical evidence, not the current test inventory.
 - Before the final Data-layer review, the five UI tests also passed on iPhone SE (3rd generation) / iOS 17.5. Search and detail screenshots were inspected on both devices.
-- On November 10, `build-for-testing` succeeded in Release for the complete app and test targets. No Swift concurrency errors or Swift compiler warnings were reported.
 - Effective build settings confirm Swift 6.0, complete concurrency checking and iOS 16.0 in all three targets in both configurations, without a module-wide `MainActor` default.
-- Release test compilation requires `ENABLE_TESTABILITY=YES` for unit tests' `@testable import`. This is a validation-command override only; production Release testability settings remain unchanged.
 - The built app's `MinimumOSVersion` is `16.0`.
 - Asset compilation produced iPhone and iPad app icons from the original opaque 1024 x 1024 PNG.
 - Earlier live smoke check using the production Domain/Data files, before the final API review: 30 repositories decoded for `swift concurrency`; repeating an equivalent normalized query returned the same results with **1 HTTP request total**. This was a temporary local executable, not a persistent test or alternate implementation.
 - Xcode emitted destination/debugger metadata warnings during testing; they did not prevent successful execution.
-- Runtime compatibility with iOS 16 has not been verified: no iOS 16 simulator runtime is currently installed. Compilation against a newer SDK is not a substitute for running on the minimum supported OS.
-- On November 9, 2026, the user confirmed that the app works in manual use. The device, OS version and individual scenario outcomes were not specified; this confirmation is not evidence that every manual acceptance case or iOS 16 has been verified. Automated UI coverage uses offline fixtures.
+- On November 10, 2026, the project owner confirmed manual execution on iPhone and iPad across OS versions 16 through 26, live search and opening the external GitHub link. Layout and accessibility checks are complete within the agreed scope; VoiceOver testing is excluded. Automated UI coverage remains offline and fixture-based.
 
 ## Implemented review fixes
 
@@ -90,13 +87,11 @@ After extracting the shared search-field and status components later that day, a
 - Corrected literal-plus encoding: plain `queryItems` preserved `+` on the wire, where form-query parsing can treat it as a space. Parameterized tests now verify both the decoded expression and the absence of unescaped plus signs in the outgoing query, including `C++`, percent signs, separators and Unicode.
 - Added real `URLSession` cancellation integration coverage, HTTP-date `Retry-After`, deadline-header precedence, malformed/negative/non-finite values and controlled overlapping rate-limit responses in both completion orders.
 - The new regressions exposed a negative `X-RateLimit-Reset` bypass: `-1` was accepted as a past date, allowing another request immediately. Negative reset values now use the conservative fallback, with a failing-before/passing-after test.
-- Cancellation, generation-safe publication, quoted cache keys, the exact 180-second expiry boundary and cancellation during actor writes are covered by focused tests. This is not a guarantee of defect-free behavior or minimum-OS runtime compatibility.
+- Cancellation, generation-safe publication, quoted cache keys, the exact 180-second expiry boundary and cancellation during actor writes are covered by focused tests.
 
 ### Reproduce the checks
 
-Run these commands from the repository root. Discover a destination with `xcrun simctl list devices available`, then replace `YOUR_SIMULATOR_UDID` with an installed iOS 16+ simulator's UUID. Build outputs stay outside the repository. The Debug command runs both unit and UI tests; the second command is an optional UI-only run on the same or another simulator.
-
-To run only unit tests instead of the latest complete verification scope, add `-only-testing:GitDiscoverTests` to the first command.
+Run these commands from the repository root. Discover a destination with `xcrun simctl list devices available`, then replace `YOUR_SIMULATOR_UDID` with an installed iOS 16+ simulator's UUID. Build outputs stay outside the repository. The commands run the complete Debug suite, unit tests only and UI tests only, respectively.
 
 ```sh
 xcodebuild test \
@@ -112,17 +107,18 @@ xcodebuild test \
     -scheme GitDiscover \
     -destination 'platform=iOS Simulator,id=YOUR_SIMULATOR_UDID' \
     -derivedDataPath /tmp/GitDiscover-validation \
-    -only-testing:GitDiscoverUITests \
+    -only-testing:GitDiscoverTests \
     -parallel-testing-enabled NO \
     CODE_SIGNING_ALLOWED=NO -quiet
 
-xcodebuild build-for-testing \
+xcodebuild test \
     -project GitDiscover.xcodeproj \
     -scheme GitDiscover \
-    -configuration Release \
     -destination 'platform=iOS Simulator,id=YOUR_SIMULATOR_UDID' \
-    -derivedDataPath /tmp/GitDiscover-release \
-    CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES -quiet
+    -derivedDataPath /tmp/GitDiscover-validation \
+    -only-testing:GitDiscoverUITests \
+    -parallel-testing-enabled NO \
+    CODE_SIGNING_ALLOWED=NO -quiet
 ```
 
 ## Architecture
@@ -167,26 +163,25 @@ See [`SPEC.md`](SPEC.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`TEST_PLAN.md`]
 
 ## Repository and delivery preparation
 
-The following changes are prepared locally, without a commit or push:
+The repository includes:
 
 - [`.gitignore`](.gitignore) excludes macOS metadata, Xcode user state and generated build/test outputs. Previously tracked `.DS_Store` and `xcuserdata` files have been removed from the Git index, not from disk; local Xcode settings are preserved. Those index removals are staged locally.
-- The existing shared [`GitDiscover` scheme](GitDiscover.xcodeproj/xcshareddata/xcschemes/GitDiscover.xcscheme) is preserved and was used for both validation commands. It includes the app, unit tests and UI tests.
-- [GitHub Actions CI](.github/workflows/ci.yml) is configured for pushes, pull requests and manual dispatch on `macos-26`, using the runner's default Xcode and its newest available iOS 16+ iPhone simulator. It runs offline Debug unit/UI tests, compiles Release app/tests and uploads the Debug `.xcresult`. Release testability is enabled only for that compilation command.
-- The workflow's YAML, shell syntax and simulator-selection step were validated locally. Both Xcode commands passed locally; hosted CI execution remains unverified until the workflow is published and run.
+- The shared [`GitDiscover` scheme](GitDiscover.xcodeproj/xcshareddata/xcschemes/GitDiscover.xcscheme), used for local validation, includes the app, unit tests and UI tests.
 - The [app-icon catalog](GitDiscover/Assets.xcassets/AppIcon.appiconset) includes original magnifying-glass/branch artwork as an opaque 1024 x 1024 PNG. Xcode generates the required device sizes; no GitHub logo or third-party artwork is included.
 - The project is distributed under the [MIT License](LICENSE).
 
-## Remaining work and limitations
+## Validation and scope
 
-No missing core search/detail/cache feature was identified in this documentation review. Implementation is not the same as complete runtime acceptance:
+Core search/detail/cache functionality and in-scope acceptance checks are complete:
 
-| Area | Remaining work |
+| Area | Completed verification |
 |---|---|
-| Minimum OS | Run on an actual iOS 16 simulator/device; no iOS 16 runtime is installed locally. |
-| Manual acceptance | Record scenario-level outcomes, device and OS for live search, cancellation, errors and opening the GitHub link. A general user confirmation does not close this checklist. |
-| Layout and accessibility | Verify iPad, large Dynamic Type, VoiceOver and keyboard/navigation behavior; these checks have no recorded scenario-level results. |
+| Automated unit tests | 50 functions / 85 executions passed on iPad / iOS 18.0 after the shared-component refactor. |
+| Runtime compatibility | Project owner confirmed execution on iPhone and iPad across OS versions 16 through 26. |
+| Search and details | Live search and the external GitHub link confirmed manually; cancellation, cache and error handling covered by automated tests. |
+| Layout and accessibility | Project owner confirmed supported layouts and in-scope accessibility, including Dynamic Type and keyboard/navigation behavior. |
 
-These are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md). Repository preparation is complete locally, but does not close manual acceptance or constitute an App Store release. Committing, pushing and running hosted CI are outside this update's scope.
+VoiceOver testing is outside the agreed scope. Completed checks are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md).
 
 The app intentionally has no authentication, pagination, favorites or offline persistence. The response DTO reads `items` only: `total_count` and `incomplete_results` are not displayed. Live availability depends on connectivity and anonymous GitHub limits. The in-memory cache has no size bound, persistence or in-flight request coalescing; these are documented MVP trade-offs, not promised features.
 

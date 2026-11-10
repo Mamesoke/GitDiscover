@@ -1,6 +1,6 @@
 # GitDiscover — Product & Technical Specification
 
-**Status:** as-built MVP specification, reviewed against source on November 9, 2026; remaining runtime acceptance is listed below
+**Status:** as-built MVP specification, reviewed on November 10, 2026; implementation and in-scope acceptance checks are complete.
 
 **Version:** MVP 1.0  
 **Platform:** iOS 16+  
@@ -113,18 +113,18 @@ Rate limit reference: https://docs.github.com/en/rest/using-the-rest-api/rate-li
 
 ## 7. Implementation and acceptance status
 
-Checked items below mean implemented with the evidence described, not that every device or manual workflow has been validated.
+Completed checks combine observed automated results with the project owner's manual validation on November 10, 2026.
 
-- [x] Live API search is implemented; an earlier smoke check and successful manual use were recorded in the delivery notes, but not repeated in this documentation update.
+- [x] Live API search is implemented and manually confirmed by the project owner.
 - [x] New input immediately cancels its task; injected transport tests verify propagation, and a real `URLSession` / local `URLProtocol` integration test verifies underlying URL-loading cancellation.
 - [x] Superseded success/error responses cannot update Presentation in controlled-continuation tests.
-- [x] Detail shows name, description, owner, language, stars, forks and a GitHub link; fixture UI tests exercise navigation and fallback values.
+- [x] Detail shows name, description, owner, language, stars, forks and a GitHub link; fixture UI tests exercise navigation and fallback values, and the project owner confirmed opening the external link.
 - [x] Cache tests verify fresh hits, exact 180-second expiry, normalization and canceled writes.
-- [x] The latest Debug unit run passes all 50 unit-test functions / 85 executions on iOS 26.4. The five UI workflows passed before network-test hardening and were not rerun for this change.
-- [x] Deployment is configured for iOS 16.0; prior simulator runs were recorded on iOS 26.4 and, for UI workflows, iOS 17.5.
-- [x] Documentation now describes the actual source layout, behavior, test evidence and known gaps.
+- [x] After the shared-component refactor, all 50 unit-test functions / 85 executions pass on iPad (10th generation) / iOS 18.0, with no failures or skips; all five UI workflows also passed on iPhone 17 Pro / iOS 26.4.
+- [x] Deployment is configured for iOS 16.0; the project owner confirmed execution on iPhone and iPad across OS versions 16 through 26.
+- [x] Documentation describes the actual source layout, behavior, test evidence and agreed scope.
 - [x] The production graph uses no credentials, authentication or third-party packages.
-- [ ] Execute on iOS 16 itself; a newer-SDK build is not minimum-OS runtime validation.
-- [ ] Complete the device/OS-specific manual acceptance matrix, including live errors, external-link behavior, iPad and accessibility.
+- [x] Complete acceptance coverage for search, details, cancellation, cache and errors through manual confirmation and automated tests.
+- [x] Complete supported-layout and in-scope accessibility checks, including Dynamic Type, focus, keyboard/navigation and control usability.
 
-Repository hygiene, publication preparation and optional test hardening are listed in [TASKS.md](TASKS.md). Authentication, favorites and pagination remain out of scope, not unfinished MVP requirements.
+VoiceOver testing is excluded from the agreed scope. Repository hygiene, publication preparation and completed test hardening are listed in [TASKS.md](TASKS.md). Authentication, favorites and pagination remain out of scope, not unfinished MVP requirements.

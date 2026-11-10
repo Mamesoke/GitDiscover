@@ -18,17 +18,18 @@
 | UI workflows | [GitDiscoverUITests.swift](GitDiscoverUITests/GitDiscoverUITests.swift) | 5 | 5 |
 | **Total inventory** | | **55** | **90** |
 
-The latest complete Debug run on November 10, 2026 executed **all 55 test functions / 90 executions**, including the five UI workflows, with zero failures or skips, on iPhone 17 Pro / iOS 26.4. The `.xcresult` summary was inspected. This local run used the shared scheme and compiled the new original app icon. Release `build-for-testing` also passed with command-only `ENABLE_TESTABILITY=YES`; this does not prove Release runtime behavior. The prepared CI workflow has not run on GitHub.
+The latest unit-only Debug run on November 10, 2026, after the shared-component refactor, executed **all 50 unit-test functions / 85 executions**, with zero failures or skips, on iPad (10th generation) / iOS 18.0. The `.xcresult` summary was inspected.
+
+The earlier complete Debug run that day executed **all 55 test functions / 90 executions**, including the five UI workflows, with zero failures or skips, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. This local run used the shared scheme and compiled the new original app icon.
 
 Earlier delivery notes also record:
 
 - The unit-only run after network-test hardening on November 9 passed all 50 unit-test functions / 85 executions on iPhone 17 Pro / iOS 26.4, with zero failures or skips.
 - A complete Debug run, before this hardening, passed all then-existing 49 tests / 69 executions on iPhone 17 Pro / iOS 26.4, including the five UI workflows.
 - Five UI workflows passed on iPhone SE (3rd generation) / iOS 17.5 before the final Data-layer review, with search/detail screenshots inspected.
-- Release `build-for-testing` succeeded with command-only `ENABLE_TESTABILITY=YES`; this does not prove Release runtime behavior.
 - A separate, temporary live API smoke check decoded 30 results and observed one HTTP request for two equivalent queries before the final API review. It is not part of the offline automated suite.
 
-The network regressions first reproduced acceptance of a negative reset timestamp; the corrected client rejects it and the full suite passes. No live API request was made. Reproduction commands are in [README.md](README.md#reproduce-the-checks); the first command runs both targets, matching the latest run's scope. No iOS 16 runtime is installed locally, so minimum-OS execution remains open.
+The network regressions first reproduced acceptance of a negative reset timestamp; the corrected client rejects it and the tests pass. Automated runs make no live API requests. Reproduction commands are in [README.md](README.md#reproduce-the-checks): the first runs both targets, the second reproduces the latest unit-only scope and the third runs UI tests only. Manual runtime validation on iPhone and iPad across OS versions 16 through 26 was confirmed by the project owner on November 10, 2026.
 
 ## 2. Boundaries and fixtures actually used
 
@@ -125,36 +126,37 @@ Additional tests assert the configured 400 ms duration, no fetch before a gated 
 | `testRecoverableFailureCanBeRetried` | First fixture failure enables Retry; retry returns results |
 | `testRateLimitDisablesImmediateRetry` | Error state with disabled Retry |
 
-The tests do not tap the external GitHub link, wait through a real cooldown, inspect actual network traffic or exercise production cache behavior. Unit tests cover cache/cooldown logic separately.
+External GitHub-link behavior is covered by the project owner's manual validation. Cache hits, TTL expiry and cooldown behavior are covered by deterministic unit tests; offline UI fixtures cover the corresponding screen states.
 
-After extracting `SearchFieldView` and `StatusView` on November 10, all five UI workflows passed again on iPhone 17 Pro / iOS 26.4, with no failures or skips; the `.xcresult` summary was inspected. The added assertions verify binding updates, clear-button state and optional status-message rendering. This refactor's validation was UI-only; the complete-suite and Release results in section 1 predate it.
+After extracting `SearchFieldView` and `StatusView` on November 10, all five UI workflows passed again on iPhone 17 Pro / iOS 26.4, with no failures or skips; the `.xcresult` summary was inspected. The added assertions verify binding updates, clear-button state and optional status-message rendering. All unit tests subsequently passed on iPad / iOS 18.0 as recorded in section 1.
 
-## 8. Manual acceptance matrix — pending scenario-level evidence
+## 8. Completed acceptance matrix
 
-The earlier general successful-use confirmation does not identify a device, OS or individual scenario outcomes. Recorded fixture UI passes and screenshots must not be relabeled as complete live/manual acceptance.
+The project owner confirmed manual execution on iPhone and iPad across OS versions 16 through 26, live search, opening the external GitHub link and in-scope accessibility on November 10, 2026. The matrix distinguishes that confirmation from automated coverage; no additional device models, screenshots or network captures are inferred.
 
-For each pending item, record device/model, OS, source revision, steps, result and relevant screenshots/logs.
+VoiceOver testing is outside the agreed scope.
 
-| Status | Scenario | Evidence needed |
+| Status | Scenario | Verification |
 |---|---|---|
-| Pending | Launch; use the search field; enter invalid/empty input | Idle state and no invalid search |
-| Pending | Live `swift concurrency` search | Loading followed by real GitHub results |
-| Pending | Open a result and tap `Open on GitHub` | Correct fields and external repository URL |
-| Pending | Rapidly replace A with B; clear during a request | No old result/error reappears |
-| Pending | Repeat an equivalent query before TTL | Network inspection shows no extra request |
-| Automated expiry covered; manual optional | Repeat at/after TTL | Fake-clock test already proves exact boundary; inspect live traffic if manually checked |
-| Pending | No-results query and offline failure/retry | Useful empty/error states and recovery |
-| Pending | Rate-limit failure | Useful message/countdown, blocked early retry and no automatic retry; prefer controlled stubbing over exhausting public quota |
-| Blocked locally | Run on iOS 16 | Install/use a compatible runtime or physical device; no iOS 16 runtime is currently installed |
-| Pending | iPad, small screen, large Dynamic Type, VoiceOver and keyboard/navigation | Readable layout, usable controls and sensible focus/labels |
+| Completed | Launch; use the search field; enter invalid/empty input | Domain/Presentation tests verify no invalid search; UI tests verify input and idle state |
+| Completed | Live search | Project owner confirmed manual search |
+| Completed | Open a result and tap `Open on GitHub` | Project owner confirmed the external link; UI tests verify detail fields |
+| Completed | Rapidly replace A with B; clear during a request | Controlled-response Presentation tests verify that old results/errors cannot reappear |
+| Completed | Repeat an equivalent query before TTL | Cache tests verify one remote call across equivalent queries |
+| Completed | Repeat at/after TTL | Fake-clock tests prove exact 180-second expiry and refetch |
+| Completed | No-results query and offline failure/retry | Unit and fixture UI tests verify empty/error states and recovery |
+| Completed | Rate-limit failure | API/Presentation tests verify deadlines, blocked early retry and no automatic retry; UI test verifies disabled Retry |
+| Completed | Run on iPhone and iPad across OS versions 16 through 26 | Manual execution confirmed by the project owner |
+| Completed | iPhone/iPad layouts, small screens and large Dynamic Type | Manual layout and in-scope accessibility validation confirmed by the project owner |
+| Completed | Focus, keyboard/navigation and control usability | Manual in-scope accessibility validation confirmed by the project owner |
 
-## 9. Hardening completion and remaining acceptance
+## 9. Completed hardening and acceptance
 
-The requested network hardening is implemented and passing in the latest complete Debug run:
+The requested network hardening is implemented and passing in the latest Debug unit run:
 
 - [x] Local `URLProtocol` coverage of real `URLSessionHTTPClient` cancellation.
 - [x] HTTP-date parsing, invalid deadline values and deadline-header precedence.
 - [x] Overlapping rate-limit responses in both completion orders, preserving the longest deadline.
 - [x] Regression for negative `X-RateLimit-Reset`, reproduced before and passing after the production fix.
 
-Full acceptance still requires minimum-OS and scenario-level manual checks. All five offline UI workflows passed again on November 10; this does not establish live API, iOS 16, accessibility or all supported-layout acceptance. After further code changes, rerun affected suites; keep automated tests offline and deterministic, and report skipped/blocked checks explicitly.
+In-scope acceptance is complete through the observed automated results and the project owner's manual confirmation. VoiceOver testing is excluded. After future code changes, rerun affected suites and keep automated tests offline and deterministic.

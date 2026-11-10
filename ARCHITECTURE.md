@@ -1,6 +1,6 @@
 # GitDiscover — Architecture & Engineering Decisions
 
-**Status:** implemented architecture, checked against source on November 10, 2026. Runtime evidence and remaining validation are documented in [TEST_PLAN.md](TEST_PLAN.md).
+**Status:** implemented architecture, checked against source on November 10, 2026. Completed automated and in-scope manual validation are documented in [TEST_PLAN.md](TEST_PLAN.md).
 
 ## 1. Architectural principle
 
@@ -235,10 +235,10 @@ In Debug only, `--ui-testing` replaces the repository with `UITestRepository`. I
 | ADR-10 | API-client cooldown below cache | Shared server backoff across queries without blocking fresh cached results |
 | ADR-11 | Injected HTTP client and search delay | Offline transport tests and deterministic debounce/concurrency tests |
 
-## 9. Build configuration and remaining checks
+## 9. Build configuration and validation
 
 - All three targets use Swift 6 language mode; project settings enable complete strict-concurrency checking in Debug and Release.
 - There is no module-wide `MainActor` default. Presentation and composition explicitly opt in; cache and client isolate mutable state in actors. Approachable concurrency remains enabled.
-- The configured iOS 16.0 deployment target is not evidence of execution on iOS 16. That runtime check is still open.
+- The deployment target is iOS 16.0. The project owner confirmed manual execution on iPhone and iPad across OS versions 16 through 26.
 - Cancellation tests use injected transports and a real ephemeral `URLSession` / local `URLProtocol` integration test that observes request start/stop. The test protocol has no mutable state and uses request-specific notification observations; no global mutable handler or external network is involved.
 - Source boundaries, cache memory policy and wall-clock TTL are deliberate simplicity trade-offs; no additional framework or module split is required for this MVP.
