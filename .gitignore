@@ -1,9 +1,21 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 ## User settings
 xcuserdata/
+*.xcuserstate
+
+## Generated build and test outputs
+build/
+DerivedData/
+*.xcresult
+*.xcarchive
 
 ## Obj-C/Swift specific
 *.hmap

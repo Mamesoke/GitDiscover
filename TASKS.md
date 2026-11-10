@@ -1,6 +1,6 @@
 # GitDiscover — Implementation Status & Remaining Work
 
-**Reviewed:** November 9, 2026. This is a status/backlog document, not a list of features still to implement. Core MVP functionality is present. Open acceptance checks, coverage improvements and delivery preparation are separated below.
+**Reviewed:** November 10, 2026. This is a status/backlog document, not a list of features still to implement. Core MVP functionality is present. Repository preparation is complete locally, without committing or pushing. Open acceptance checks, coverage improvements and delivery preparation are separated below.
 
 See [SPEC.md](SPEC.md) for behavior, [ARCHITECTURE.md](ARCHITECTURE.md) for the implemented design and [TEST_PLAN.md](TEST_PLAN.md) for test-to-requirement mapping.
 
@@ -40,13 +40,14 @@ See [SPEC.md](SPEC.md) for behavior, [ARCHITECTURE.md](ARCHITECTURE.md) for the 
 
 | Evidence | Status and scope |
 |---|---|
-| Latest Debug unit suite | After network-test hardening: all 50 unit-test functions / 85 executions passed, no failures or skips, iPhone 17 Pro / iOS 26.4. |
-| Earlier complete Debug suite | Retained pre-hardening result: 49 passing tests / 69 executions, including five UI workflows, no failures or skips, iPhone 17 Pro / iOS 26.4. UI workflows were not rerun for this change. |
+| Latest complete Debug suite | November 10: all 55 test functions / 90 executions passed, including five UI workflows, no failures or skips, iPhone 17 Pro / iOS 26.4. Shared scheme and original app icon included. |
+| Previous Debug unit suite | November 9, after network-test hardening: all 50 unit-test functions / 85 executions passed, no failures or skips, iPhone 17 Pro / iOS 26.4. |
+| Earlier complete Debug suite | Retained pre-hardening result: 49 passing tests / 69 executions, including five UI workflows, no failures or skips, iPhone 17 Pro / iOS 26.4. |
 | Earlier UI run | Previously recorded: all five workflows passed on iPhone SE (3rd generation) / iOS 17.5 before the final Data-layer review; screenshots were inspected. Not repeated here. |
-| Release test compilation | Previously recorded successful `build-for-testing` with command-only `ENABLE_TESTABILITY=YES`. This is compilation evidence, not a Release runtime test. |
+| Release test compilation | Repeated successfully on November 10 with command-only `ENABLE_TESTABILITY=YES`. iPhone/iPad icon entries and minimum OS 16.0 verified in the built app. This is compilation evidence, not a Release runtime test. |
 | Live API smoke check | Previously recorded before the final API review: 30 decoded results and one HTTP request across two equivalent queries. Not a persistent automated test. |
 | Manual use | Prior delivery notes record a general successful-use confirmation on November 9, 2026, without device/OS or per-scenario outcomes. |
-| Documentation update | Source/test inventory, project settings, scheme availability, Xcode 26.4 / Swift compiler 6.3 and installed simulators checked. No new build, test run or live request. |
+| Local repository/CI preparation | Metadata removed from the index while preserved on disk; ignore rules checked. Shared-scheme XML, workflow YAML, shell syntax and simulator selection validated locally. No commit, push, hosted CI run or live API request. |
 
 The literal-plus encoding and cross-query cooldown defects identified in the earlier technical review are already fixed and have regression tests. They are not open tasks.
 
@@ -61,24 +62,24 @@ These are verification gaps, not evidence that the corresponding feature is abse
 
 ## 4. Completed network coverage hardening
 
-These additions strengthen confidence without expanding the MVP feature set. They are included in the latest passing unit run.
+These additions strengthen confidence without expanding the MVP feature set. They are included in the latest passing complete Debug run.
 
 - [x] Verify real `URLSessionHTTPClient` cancellation with a local `URLProtocol`, observing request start/stop and `URLError.cancelled` without network access.
 - [x] Cover HTTP-date `Retry-After`, malformed/negative/non-finite values and deadline-header precedence.
 - [x] Control overlapping rate-limit responses in both completion orders and verify that the longest deadline wins.
 - [x] Fix the exposed negative-reset bypass: reject negative `X-RateLimit-Reset` timestamps and fall back to 60 seconds. Regression reproduced before the fix and passing afterward.
 
-The additions reuse clocks, gates and spies, with no real TTL waits, new dependencies or public API calls. Five API test functions plus one transport test were added. The total source inventory is now 55 test functions / 90 executions, but only the 50-function unit target was executed for this change.
+The additions reuse clocks, gates and spies, with no real TTL waits, new dependencies or public API calls. Five API test functions plus one transport test were added. The total source inventory is 55 test functions / 90 executions; both test targets passed in the November 10 repository-preparation run.
 
 ## 5. Repository and publication preparation
 
-- [ ] Add `.gitignore` rules for macOS metadata, Xcode user state and generated build/test outputs.
-- [ ] Unstage/untrack the currently staged `.DS_Store` and `xcuserdata` files, preserving local settings. No cleanup was performed by this documentation update.
-- [ ] If automated delivery is required, commit a shared `GitDiscover` scheme and add a macOS/Xcode CI workflow. An autogenerated scheme currently supports local `xcodebuild`; no shared scheme or CI workflow is committed.
-- [ ] Select an explicit license before open-source publication; no license file is present.
-- [ ] Provide app-icon artwork before distribution; the existing catalog contains slots without image files.
+- [x] Add `.gitignore` rules for macOS metadata, Xcode user state and generated build/test outputs.
+- [x] Remove tracked `.DS_Store` and `xcuserdata` files from the Git index while preserving every local file and setting. Their index removals remain staged locally.
+- [x] Prepare the shared [`GitDiscover` scheme](GitDiscover.xcodeproj/xcshareddata/xcschemes/GitDiscover.xcscheme) and a [macOS/Xcode CI workflow](.github/workflows/ci.yml) locally. Preserve the existing shared scheme; validate YAML, shell syntax, simulator selection and both Xcode commands without publishing.
+- [x] Add an explicit [MIT license](LICENSE) and link it from the README.
+- [x] Provide original [app-icon artwork](GitDiscover/Assets.xcassets/AppIcon.appiconset/AppIcon.png): opaque 1024 x 1024 PNG, wired into the asset catalog and compiled for iPhone/iPad.
 
-These items do not prevent reviewing or running the local assessment MVP, but should not be mistaken for completed release preparation.
+Section 5 is complete in the requested local-only scope. No commit or push was performed, and the GitHub-hosted workflow has not run. Publication, signing/distribution and the manual acceptance checks in section 3 are not implied by this preparation.
 
 ## 6. Deliberate MVP limits
 

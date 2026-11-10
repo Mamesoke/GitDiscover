@@ -1,6 +1,6 @@
 # GitDiscover — Test Plan
 
-**Reviewed:** November 9, 2026.
+**Reviewed:** November 10, 2026.
 
 **Frameworks:** Swift Testing in `GitDiscoverTests`; XCTest/XCUIApplication in `GitDiscoverUITests` for UI automation. The split is intentional.
 
@@ -18,16 +18,17 @@
 | UI workflows | [GitDiscoverUITests.swift](GitDiscoverUITests/GitDiscoverUITests.swift) | 5 | 5 |
 | **Total inventory** | | **55** | **90** |
 
-The latest Debug run on November 9, 2026 executed **all 50 unit-test functions / 85 executions**, with zero failures or skips, on iPhone 17 Pro / iOS 26.4. The `.xcresult` summary was inspected. The five unchanged UI workflows were **not rerun** for network-test hardening; the inventory total must not be presented as one new 55-test passing run.
+The latest complete Debug run on November 10, 2026 executed **all 55 test functions / 90 executions**, including the five UI workflows, with zero failures or skips, on iPhone 17 Pro / iOS 26.4. The `.xcresult` summary was inspected. This local run used the shared scheme and compiled the new original app icon. Release `build-for-testing` also passed with command-only `ENABLE_TESTABILITY=YES`; this does not prove Release runtime behavior. The prepared CI workflow has not run on GitHub.
 
 Earlier delivery notes also record:
 
+- The unit-only run after network-test hardening on November 9 passed all 50 unit-test functions / 85 executions on iPhone 17 Pro / iOS 26.4, with zero failures or skips.
 - A complete Debug run, before this hardening, passed all then-existing 49 tests / 69 executions on iPhone 17 Pro / iOS 26.4, including the five UI workflows.
 - Five UI workflows passed on iPhone SE (3rd generation) / iOS 17.5 before the final Data-layer review, with search/detail screenshots inspected.
 - Release `build-for-testing` succeeded with command-only `ENABLE_TESTABILITY=YES`; this does not prove Release runtime behavior.
 - A separate, temporary live API smoke check decoded 30 results and observed one HTTP request for two equivalent queries before the final API review. It is not part of the offline automated suite.
 
-The new tests first reproduced acceptance of a negative reset timestamp; the corrected client rejects it and the full unit target passes. No live API request was made. Reproduction commands are in [README.md](README.md#reproduce-the-checks); use `-only-testing:GitDiscoverTests` for the latest run's scope. No iOS 16 runtime is installed locally, so minimum-OS execution remains open.
+The network regressions first reproduced acceptance of a negative reset timestamp; the corrected client rejects it and the full suite passes. No live API request was made. Reproduction commands are in [README.md](README.md#reproduce-the-checks); the first command runs both targets, matching the latest run's scope. No iOS 16 runtime is installed locally, so minimum-OS execution remains open.
 
 ## 2. Boundaries and fixtures actually used
 
@@ -147,11 +148,11 @@ For each pending item, record device/model, OS, source revision, steps, result a
 
 ## 9. Hardening completion and remaining acceptance
 
-The requested network hardening is implemented and passing in the latest unit run:
+The requested network hardening is implemented and passing in the latest complete Debug run:
 
 - [x] Local `URLProtocol` coverage of real `URLSessionHTTPClient` cancellation.
 - [x] HTTP-date parsing, invalid deadline values and deadline-header precedence.
 - [x] Overlapping rate-limit responses in both completion orders, preserving the longest deadline.
 - [x] Regression for negative `X-RateLimit-Reset`, reproduced before and passing after the production fix.
 
-Full acceptance still requires minimum-OS and scenario-level manual checks. UI workflows retain their earlier passing result, not a fresh run after this change. After further code changes, rerun affected suites; keep automated tests offline and deterministic, and report skipped/blocked checks explicitly.
+Full acceptance still requires minimum-OS and scenario-level manual checks. All five offline UI workflows passed again on November 10; this does not establish live API, iOS 16, accessibility or all supported-layout acceptance. After further code changes, rerun affected suites; keep automated tests offline and deterministic, and report skipped/blocked checks explicitly.

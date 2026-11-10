@@ -1,0 +1,80 @@
+name: iOS CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select an available iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          xcodebuild -version
+          python3 <<'PY'
+          import json
+          import os
+          import subprocess
+
+          devices = json.loads(subprocess.check_output(
+              ["xcrun", "simctl", "list", "devices", "available", "--json"], text=True
+          ))["devices"]
+          runtimes = [
+              runtime for runtime in devices
+              if runtime.startswith("com.apple.CoreSimulator.SimRuntime.iOS-")
+          ]
+          version = lambda runtime: tuple(map(int, runtime.rsplit("iOS-", 1)[1].split("-")))
+          for runtime in sorted(runtimes, key=version, reverse=True):
+              iphones = [device for device in devices[runtime] if device["name"].startswith("iPhone")]
+              if version(runtime) >= (16,) and iphones:
+                  device = iphones[0]
+                  print(f"Using {device['name']} on {runtime}: {device['udid']}")
+                  with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                      output.write(f"udid={device['udid']}\n")
+                  break
+          else:
+              raise SystemExit("No available iPhone simulator with iOS 16 or newer.")
+          PY
+
+      - name: Run offline unit and UI tests
+        run: |
+          xcodebuild test \
+            -project GitDiscover.xcodeproj \
+            -scheme GitDiscover \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}' \
+            -derivedDataPath "$RUNNER_TEMP/GitDiscover-debug" \
+            -resultBundlePath "$RUNNER_TEMP/GitDiscover-debug.xcresult" \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO -quiet
+
+      - name: Compile Release app and tests
+        run: |
+          xcodebuild build-for-testing \
+            -project GitDiscover.xcodeproj \
+            -scheme GitDiscover \
+            -configuration Release \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}' \
+            -derivedDataPath "$RUNNER_TEMP/GitDiscover-release" \
+            CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES -quiet
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GitDiscover-test-results
+          path: ${{ runner.temp }}/GitDiscover-debug.xcresult
+          if-no-files-found: warn

@@ -2,7 +2,7 @@
 
 A small SwiftUI iOS application for searching and exploring public GitHub repositories. Built as a technical assessment focused on clean architecture, async cancellation, an in-memory TTL cache and unit tests.
 
-> **Status as of November 9, 2026:** the search/detail MVP is implemented with Domain, Data/cache and Presentation layers. After network-test hardening, all **50 unit-test functions (85 executions)** pass on iOS 26.4. The five UI workflows passed in an earlier run and were not rerun for this change. The deployment target is iOS 16.0, but execution on iOS 16 remains unverified.
+> **Status as of November 10, 2026:** the search/detail MVP is implemented with Domain, Data/cache and Presentation layers. All **55 test functions (90 executions)** pass on iOS 26.4, including the five UI workflows. MIT licensing, repository cleanup, a shared scheme, CI configuration and original app-icon artwork are prepared locally, without committing or pushing. The deployment target is iOS 16.0, but execution on iOS 16 remains unverified.
 
 ## MVP features
 
@@ -66,15 +66,17 @@ Automated tests use fakes, controlled continuations and injected clocks/delays. 
 
 ## Verification record
 
-The latest Debug run built and executed the complete unit-test target after adding network regressions and fixing negative reset-header handling: **50 passing test functions, 85 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. UI tests, Release compilation and live API checks were not repeated for this change; their earlier evidence is listed separately below.
+The latest Debug run on November 10, 2026 built and executed both test targets using the shared scheme and the new app icon: **55 passing test functions, 90 executions, no failures or skips**, on iPhone 17 Pro / iOS 26.4. Its `.xcresult` summary was inspected. Release compilation was also repeated successfully. These are local results; the prepared GitHub Actions workflow has not run on GitHub, and live API/manual checks were not repeated.
 
 - Toolchain checked locally: Xcode 26.4, Swift compiler 6.3 and iOS Simulator SDK 26.4.
+- Previous unit-only run after network-test hardening on November 9: **50 passing functions / 85 executions**, with no failures or skips, on iPhone 17 Pro / iOS 26.4.
 - Earlier complete Debug test run on iPhone 17 Pro / iOS 26.4, before network-test hardening: **49 tests passed, 0 failed, 0 skipped**, with **69 executions** (44 unit-test functions / 64 unit executions, plus 5 UI tests). This is historical evidence, not the current test inventory.
 - Before the final Data-layer review, the five UI tests also passed on iPhone SE (3rd generation) / iOS 17.5. Search and detail screenshots were inspected on both devices.
-- `build-for-testing` succeeded in Release for the complete app and test targets. No Swift concurrency errors or Swift compiler warnings were reported in the final builds.
+- On November 10, `build-for-testing` succeeded in Release for the complete app and test targets. No Swift concurrency errors or Swift compiler warnings were reported.
 - Effective build settings confirm Swift 6.0, complete concurrency checking and iOS 16.0 in all three targets in both configurations, without a module-wide `MainActor` default.
 - Release test compilation requires `ENABLE_TESTABILITY=YES` for unit tests' `@testable import`. This is a validation-command override only; production Release testability settings remain unchanged.
 - The built app's `MinimumOSVersion` is `16.0`.
+- Asset compilation produced iPhone and iPad app icons from the original opaque 1024 x 1024 PNG.
 - Earlier live smoke check using the production Domain/Data files, before the final API review: 30 repositories decoded for `swift concurrency`; repeating an equivalent normalized query returned the same results with **1 HTTP request total**. This was a temporary local executable, not a persistent test or alternate implementation.
 - Xcode emitted destination/debugger metadata warnings during testing; they did not prevent successful execution.
 - Runtime compatibility with iOS 16 has not been verified: no iOS 16 simulator runtime is currently installed. Compilation against a newer SDK is not a substitute for running on the minimum supported OS.
@@ -92,7 +94,7 @@ The latest Debug run built and executed the complete unit-test target after addi
 
 Run these commands from the repository root. Discover a destination with `xcrun simctl list devices available`, then replace `YOUR_SIMULATOR_UDID` with an installed iOS 16+ simulator's UUID. Build outputs stay outside the repository. The Debug command runs both unit and UI tests; the second command is an optional UI-only run on the same or another simulator.
 
-To reproduce the latest **unit-only** verification scope, add `-only-testing:GitDiscoverTests` to the first command.
+To run only unit tests instead of the latest complete verification scope, add `-only-testing:GitDiscoverTests` to the first command.
 
 ```sh
 xcodebuild test \
@@ -160,6 +162,17 @@ The cache actor guarantees race-free storage, not in-flight request coalescing: 
 
 See [`SPEC.md`](SPEC.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`TEST_PLAN.md`](TEST_PLAN.md), and [`TASKS.md`](TASKS.md) for implementation and acceptance criteria.
 
+## Repository and delivery preparation
+
+The following changes are prepared locally, without a commit or push:
+
+- [`.gitignore`](.gitignore) excludes macOS metadata, Xcode user state and generated build/test outputs. Previously tracked `.DS_Store` and `xcuserdata` files have been removed from the Git index, not from disk; local Xcode settings are preserved. Those index removals are staged locally.
+- The existing shared [`GitDiscover` scheme](GitDiscover.xcodeproj/xcshareddata/xcschemes/GitDiscover.xcscheme) is preserved and was used for both validation commands. It includes the app, unit tests and UI tests.
+- [GitHub Actions CI](.github/workflows/ci.yml) is configured for pushes, pull requests and manual dispatch on `macos-26`, using the runner's default Xcode and its newest available iOS 16+ iPhone simulator. It runs offline Debug unit/UI tests, compiles Release app/tests and uploads the Debug `.xcresult`. Release testability is enabled only for that compilation command.
+- The workflow's YAML, shell syntax and simulator-selection step were validated locally. Both Xcode commands passed locally; hosted CI execution remains unverified until the workflow is published and run.
+- The [app-icon catalog](GitDiscover/Assets.xcassets/AppIcon.appiconset) includes original magnifying-glass/branch artwork as an opaque 1024 x 1024 PNG. Xcode generates the required device sizes; no GitHub logo or third-party artwork is included.
+- The project is distributed under the [MIT License](LICENSE).
+
 ## Remaining work and limitations
 
 No missing core search/detail/cache feature was identified in this documentation review. Implementation is not the same as complete runtime acceptance:
@@ -169,14 +182,11 @@ No missing core search/detail/cache feature was identified in this documentation
 | Minimum OS | Run on an actual iOS 16 simulator/device; no iOS 16 runtime is installed locally. |
 | Manual acceptance | Record scenario-level outcomes, device and OS for live search, cancellation, errors and opening the GitHub link. A general user confirmation does not close this checklist. |
 | Layout and accessibility | Verify iPad, large Dynamic Type, VoiceOver and keyboard/navigation behavior; these checks have no recorded scenario-level results. |
-| Repository hygiene | Add a `.gitignore` and remove staged `.DS_Store` / Xcode `xcuserdata` from version control without deleting local user settings. |
-| Delivery automation | No CI workflow or committed shared scheme exists. Local autogenerated schemes work; share a scheme and add CI if repeatable automated delivery is required. |
-| Publication | Choose a license before open-source release. The app-icon catalog has no image files; supply artwork before distribution. |
 
-These are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md). The network-test hardening closes the previously listed transport and deadline-header coverage gaps; it does not perform repository cleanup or complete manual acceptance.
+These are tracked in [TASKS.md](TASKS.md), with coverage and acceptance details in [TEST_PLAN.md](TEST_PLAN.md). Repository preparation is complete locally, but does not close manual acceptance or constitute an App Store release. Committing, pushing and running hosted CI are outside this update's scope.
 
 The app intentionally has no authentication, pagination, favorites or offline persistence. The response DTO reads `items` only: `total_count` and `incomplete_results` are not displayed. Live availability depends on connectivity and anonymous GitHub limits. The in-memory cache has no size bound, persistence or in-flight request coalescing; these are documented MVP trade-offs, not promised features.
 
 ## License
 
-No license file is present. Choose a license explicitly before publishing the project as open source; do not assume a license is granted by default.
+Distributed under the [MIT License](LICENSE). See the license for permissions, conditions and the warranty disclaimer.
